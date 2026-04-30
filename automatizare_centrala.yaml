@@ -1,0 +1,175 @@
+###############################################################
+#  AUTOMATIZARE CENTRALĂ TERMICĂ – 4 TERMOSTATE ZIGBEE
+#  Contact uscat (dry contact) pentru pornire/oprire centrală
+#
+#  Înlocuiește entity_id-urile cu cele din instalația ta!
+#  Termostatele Zigbee expun de obicei atributul hvac_action:
+#    "heating"  = solicită căldură
+#    "idle"     = temperatura atinsă, nu solicită
+###############################################################
+
+# ─────────────────────────────────────────────────────────────
+# TEMPLATE SENSOR – stare globală "se cere caldură?"
+# Pune în configuration.yaml sau în packages/centrala.yaml
+# ─────────────────────────────────────────────────────────────
+template:
+  - binary_sensor:
+      - name: "Cere caldura vreun termostat"
+        unique_id: "thermostats_any_heating"
+        device_class: heat
+        # Returnează true dacă CEL PUȚIN UN termostat este în mod "heating"
+        state: >
+          {% set t1 = state_attr('climate.termostat_camera_1', 'hvac_action') == 'heating' %}
+          {% set t2 = state_attr('climate.termostat_camera_2', 'hvac_action') == 'heating' %}
+          {% set t3 = state_attr('climate.termostat_camera_3', 'hvac_action') == 'heating' %}
+          {% set t4 = state_attr('climate.termostat_camera_4', 'hvac_action') == 'heating' %}
+          {{ t1 or t2 or t3 or t4 }}
+        # Toleranță: nu reacționa la fluctuații rapide (delay de 30s)
+        delay_on:
+          seconds: 30
+        delay_off:
+          seconds: 60
+        availability: >
+          {{ states('climate.termostat_camera_1') not in ['unavailable', 'unknown']
+             and states('climate.termostat_camera_2') not in ['unavailable', 'unknown']
+             and states('climate.termostat_camera_3') not in ['unavailable', 'unknown']
+             and states('climate.termostat_camera_4') not in ['unavailable', 'unknown'] }}
+
+
+# ─────────────────────────────────────────────────────────────
+# AUTOMATIZĂRI
+# ─────────────────────────────────────────────────────────────
+automation:
+
+  # ───── 1. PORNIRE CENTRALĂ ─────────────────────────────────
+  - id: "pornire_centrala_termica"
+    alias: "Centrală – Pornire când se cere căldură"
+    description: >
+      Pornește centrala (contact uscat ON) dacă cel puțin un
+      termostat solicită căldură.
+    mode: single
+    max_exceeded: silent
+
+    trigger:
+      # Trigger principal: binary sensor trece pe ON
+      - platform: state
+        entity_id: binary_sensor.cere_caldura_vreun_termostat
+        to: "on"
+      # Trigger de siguranță: la repornirea HA, verifică starea curentă
+      - platform: homeassistant
+        event: start
+
+    condition:
+      - condition: state
+        entity_id: binary_sensor.cere_caldura_vreun_termostat
+        state: "on"
+      # Nu porni dacă centrala e deja pornită (evită comenzi redundante)
+      - condition: state
+        entity_id: switch.relay_contact_uscat_centrala
+        state: "off"
+
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.relay_contact_uscat_centrala
+      - service: notify.persistent_notification
+        data:
+          title: "Centrală termică"
+          message: >
+            Centrala pornită la {{ now().strftime('%H:%M') }}.
+            Termostate active:
+            {%- if state_attr('climate.termostat_camera_1','hvac_action')=='heating' %} Camera 1{%- endif %}
+            {%- if state_attr('climate.termostat_camera_2','hvac_action')=='heating' %} Camera 2{%- endif %}
+            {%- if state_attr('climate.termostat_camera_3','hvac_action')=='heating' %} Camera 3{%- endif %}
+            {%- if state_attr('climate.termostat_camera_4','hvac_action')=='heating' %} Camera 4{%- endif %}
+
+
+  # ───── 2. OPRIRE CENTRALĂ ──────────────────────────────────
+  - id: "oprire_centrala_termica"
+    alias: "Centrală – Oprire când nu se mai cere căldură"
+    description: >
+      Oprește centrala (contact uscat OFF) când toate termostatele
+      sunt satisfăcute (niciun termostat nu mai solicită căldură).
+    mode: single
+    max_exceeded: silent
+
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cere_caldura_vreun_termostat
+        to: "off"
+      - platform: homeassistant
+        event: start
+
+    condition:
+      - condition: state
+        entity_id: binary_sensor.cere_caldura_vreun_termostat
+        state: "off"
+      # Nu opri dacă e deja oprită
+      - condition: state
+        entity_id: switch.relay_contact_uscat_centrala
+        state: "on"
+
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.relay_contact_uscat_centrala
+      - service: notify.persistent_notification
+        data:
+          title: "Centrală termică"
+          message: "Centrala oprită la {{ now().strftime('%H:%M') }}. Toate camerele au atins temperatura."
+
+
+  # ───── 3. PROTECȚIE – TIMEOUT MAXIM (opțional, recomandat) ─
+  - id: "centrala_timeout_siguranta"
+    alias: "Centrală – Oprire de siguranță după 3 ore continuu"
+    description: >
+      Dacă centrala rulează mai mult de 3 ore fără întrerupere,
+      oprește și trimite o alertă. Ajustează după nevoie.
+    mode: single
+
+    trigger:
+      - platform: state
+        entity_id: switch.relay_contact_uscat_centrala
+        to: "on"
+        for:
+          hours: 3
+
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.relay_contact_uscat_centrala
+      - service: notify.persistent_notification
+        data:
+          title: "⚠️ Alertă centrală termică"
+          message: >
+            Centrala a fost pornită mai mult de 3 ore continuu.
+            A fost oprită automat ca măsură de siguranță.
+            Verificați instalația!
+
+
+  # ───── 4. ALERTĂ TERMOSTAT OFFLINE ─────────────────────────
+  - id: "alerta_termostat_offline"
+    alias: "Centrală – Alertă dacă un termostat devine indisponibil"
+    description: >
+      Notifică dacă vreun termostat Zigbee pierde conexiunea.
+    mode: parallel
+    max: 4
+
+    trigger:
+      - platform: state
+        entity_id:
+          - climate.termostat_camera_1
+          - climate.termostat_camera_2
+          - climate.termostat_camera_3
+          - climate.termostat_camera_4
+        to: "unavailable"
+        for:
+          minutes: 5
+
+    action:
+      - service: notify.persistent_notification
+        data:
+          title: "⚠️ Termostat offline"
+          message: >
+            Termostatul {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }}
+            nu răspunde de 5 minute. Verificați bateria sau conexiunea Zigbee.
