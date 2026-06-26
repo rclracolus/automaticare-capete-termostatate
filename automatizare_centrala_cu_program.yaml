@@ -1,0 +1,561 @@
+###############################################################
+#  AUTOMATIZARE CENTRALĂ TERMICĂ – 4 TERMOSTATE ZIGBEE
+#  + PROGRAM SĂPTĂMÂNAL CU TEMPERATURI PE INTERVALE ORARE
+#
+#  Structură:
+#    - input_number: temperaturi target per interval (editabile din UI)
+#    - input_select: modul curent (Dimineață / Plecat / Acasă / Noapte / Manual)
+#    - template binary_sensor: se cere căldură?
+#    - automation: schimbare interval orar (7 zile × 4 intervale = 28 trigger-e)
+#    - automation: pornire/oprire centrală + timeout + alertă offline
+#
+#  Înlocuiește entity_id-urile cu cele din instalația ta!
+###############################################################
+
+
+# ─────────────────────────────────────────────────────────────
+# INPUT_NUMBER – Temperaturi per interval, editabile din UI
+# ─────────────────────────────────────────────────────────────
+input_number:
+
+  # ── LUNI ──────────────────────────────────────────────
+  luni_dimineata_temp:
+    name: "Luni – Dimineață temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-sunset-up
+  luni_plecat_temp:
+    name: "Luni – Plecat temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-export-outline
+  luni_acasa_temp:
+    name: "Luni – Acasă temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-thermometer
+  luni_noapte_temp:
+    name: "Luni – Noapte temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-night
+
+  # ── MARȚI ─────────────────────────────────────────────
+  marti_dimineata_temp:
+    name: "Marți – Dimineață temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-sunset-up
+  marti_plecat_temp:
+    name: "Marți – Plecat temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-export-outline
+  marti_acasa_temp:
+    name: "Marți – Acasă temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-thermometer
+  marti_noapte_temp:
+    name: "Marți – Noapte temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-night
+
+  # ── MIERCURI ──────────────────────────────────────────
+  miercuri_dimineata_temp:
+    name: "Miercuri – Dimineață temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-sunset-up
+  miercuri_plecat_temp:
+    name: "Miercuri – Plecat temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-export-outline
+  miercuri_acasa_temp:
+    name: "Miercuri – Acasă temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-thermometer
+  miercuri_noapte_temp:
+    name: "Miercuri – Noapte temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-night
+
+  # ── JOI ───────────────────────────────────────────────
+  joi_dimineata_temp:
+    name: "Joi – Dimineață temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-sunset-up
+  joi_plecat_temp:
+    name: "Joi – Plecat temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-export-outline
+  joi_acasa_temp:
+    name: "Joi – Acasă temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-thermometer
+  joi_noapte_temp:
+    name: "Joi – Noapte temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-night
+
+  # ── VINERI ────────────────────────────────────────────
+  vineri_dimineata_temp:
+    name: "Vineri – Dimineață temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-sunset-up
+  vineri_plecat_temp:
+    name: "Vineri – Plecat temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-export-outline
+  vineri_acasa_temp:
+    name: "Vineri – Acasă temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-thermometer
+  vineri_noapte_temp:
+    name: "Vineri – Noapte temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-night
+
+  # ── SÂMBĂTĂ ───────────────────────────────────────────
+  sambata_dimineata_temp:
+    name: "Sâmbătă – Dimineață temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-sunset-up
+  sambata_plecat_temp:
+    name: "Sâmbătă – Plecat temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-export-outline
+  sambata_acasa_temp:
+    name: "Sâmbătă – Acasă temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-thermometer
+  sambata_noapte_temp:
+    name: "Sâmbătă – Noapte temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-night
+
+  # ── DUMINICĂ ──────────────────────────────────────────
+  duminica_dimineata_temp:
+    name: "Duminică – Dimineață temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-sunset-up
+  duminica_plecat_temp:
+    name: "Duminică – Plecat temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-export-outline
+  duminica_acasa_temp:
+    name: "Duminică – Acasă temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:home-thermometer
+  duminica_noapte_temp:
+    name: "Duminică – Noapte temperatură"
+    min: 5
+    max: 30
+    step: 0.5
+    unit_of_measurement: "°C"
+    icon: mdi:weather-night
+
+
+# ─────────────────────────────────────────────────────────────
+# INPUT_SELECT – Modul curent activ
+# ─────────────────────────────────────────────────────────────
+input_select:
+  mod_termostat:
+    name: "Mod termostat activ"
+    options:
+      - "Dimineață"
+      - "Plecat"
+      - "Acasă"
+      - "Noapte"
+      - "Manual"
+    initial: "Acasă"
+    icon: mdi:home-clock
+
+
+# ─────────────────────────────────────────────────────────────
+# INPUT_BOOLEAN – Activare/dezactivare program automat
+# ─────────────────────────────────────────────────────────────
+input_boolean:
+  program_termostat_activ:
+    name: "Program termostat activ"
+    initial: true
+    icon: mdi:calendar-clock
+
+
+# ─────────────────────────────────────────────────────────────
+# TEMPLATE SENSOR – stare globală "se cere căldură?"
+# ─────────────────────────────────────────────────────────────
+template:
+  - binary_sensor:
+      - name: "Cere caldura vreun termostat"
+        unique_id: "thermostats_any_heating"
+        device_class: heat
+        state: >
+          {% set t1 = state_attr('climate.termostat_camera_1', 'hvac_action') == 'heating' %}
+          {% set t2 = state_attr('climate.termostat_camera_2', 'hvac_action') == 'heating' %}
+          {% set t3 = state_attr('climate.termostat_camera_3', 'hvac_action') == 'heating' %}
+          {% set t4 = state_attr('climate.termostat_camera_4', 'hvac_action') == 'heating' %}
+          {{ t1 or t2 or t3 or t4 }}
+        delay_on:
+          seconds: 30
+        delay_off:
+          seconds: 60
+        availability: >
+          {{ states('climate.termostat_camera_1') not in ['unavailable', 'unknown']
+             and states('climate.termostat_camera_2') not in ['unavailable', 'unknown']
+             and states('climate.termostat_camera_3') not in ['unavailable', 'unknown']
+             and states('climate.termostat_camera_4') not in ['unavailable', 'unknown'] }}
+
+  # Sensor: temperatura țintă pentru intervalul curent și ziua curentă
+  - sensor:
+      - name: "Temperatura program curent"
+        unique_id: "temperatura_program_curent"
+        unit_of_measurement: "°C"
+        icon: mdi:thermometer-auto
+        state: >
+          {% set zi = now().strftime('%A') %}
+          {% set zi_map = {
+            'Monday':    'luni',
+            'Tuesday':   'marti',
+            'Wednesday': 'miercuri',
+            'Thursday':  'joi',
+            'Friday':    'vineri',
+            'Saturday':  'sambata',
+            'Sunday':    'duminica'
+          } %}
+          {% set zi_ro = zi_map[zi] %}
+          {% set mod = states('input_select.mod_termostat') %}
+          {% set mod_map = {
+            'Dimineață': 'dimineata',
+            'Plecat':    'plecat',
+            'Acasă':     'acasa',
+            'Noapte':    'noapte'
+          } %}
+          {% if mod in mod_map %}
+            {% set entity = 'input_number.' ~ zi_ro ~ '_' ~ mod_map[mod] ~ '_temp' %}
+            {{ states(entity) | float(21) }}
+          {% else %}
+            {{ 21 }}
+          {% endif %}
+
+
+# ─────────────────────────────────────────────────────────────
+# AUTOMATIZĂRI
+# ─────────────────────────────────────────────────────────────
+automation:
+
+  # ═══════════════════════════════════════════════════════════
+  # GRUP A: PROGRAM ORAR – schimbare interval
+  # Ore implicite (ajustează după nevoie):
+  #   06:00 Dimineață | 08:00 Plecat | 16:00 Acasă | 22:00 Noapte
+  # ═══════════════════════════════════════════════════════════
+
+  - id: "program_dimineata"
+    alias: "Program – Interval Dimineață (06:00)"
+    mode: single
+    trigger:
+      - platform: time
+        at: "06:00:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.program_termostat_activ
+        state: "on"
+    action:
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.mod_termostat
+        data:
+          option: "Dimineață"
+      - service: climate.set_temperature
+        target:
+          entity_id:
+            - climate.termostat_camera_1
+            - climate.termostat_camera_2
+            - climate.termostat_camera_3
+            - climate.termostat_camera_4
+        data:
+          temperature: "{{ states('sensor.temperatura_program_curent') | float }}"
+
+  - id: "program_plecat"
+    alias: "Program – Interval Plecat (08:00)"
+    mode: single
+    trigger:
+      - platform: time
+        at: "08:00:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.program_termostat_activ
+        state: "on"
+    action:
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.mod_termostat
+        data:
+          option: "Plecat"
+      - service: climate.set_temperature
+        target:
+          entity_id:
+            - climate.termostat_camera_1
+            - climate.termostat_camera_2
+            - climate.termostat_camera_3
+            - climate.termostat_camera_4
+        data:
+          temperature: "{{ states('sensor.temperatura_program_curent') | float }}"
+
+  - id: "program_acasa"
+    alias: "Program – Interval Acasă (16:00)"
+    mode: single
+    trigger:
+      - platform: time
+        at: "16:00:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.program_termostat_activ
+        state: "on"
+    action:
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.mod_termostat
+        data:
+          option: "Acasă"
+      - service: climate.set_temperature
+        target:
+          entity_id:
+            - climate.termostat_camera_1
+            - climate.termostat_camera_2
+            - climate.termostat_camera_3
+            - climate.termostat_camera_4
+        data:
+          temperature: "{{ states('sensor.temperatura_program_curent') | float }}"
+
+  - id: "program_noapte"
+    alias: "Program – Interval Noapte (22:00)"
+    mode: single
+    trigger:
+      - platform: time
+        at: "22:00:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.program_termostat_activ
+        state: "on"
+    action:
+      - service: input_select.select_option
+        target:
+          entity_id: input_select.mod_termostat
+        data:
+          option: "Noapte"
+      - service: climate.set_temperature
+        target:
+          entity_id:
+            - climate.termostat_camera_1
+            - climate.termostat_camera_2
+            - climate.termostat_camera_3
+            - climate.termostat_camera_4
+        data:
+          temperature: "{{ states('sensor.temperatura_program_curent') | float }}"
+
+  # Restaurare program după repornire HA
+  - id: "program_restaurare_ha_start"
+    alias: "Program – Restaurare temperaturi la pornire HA"
+    mode: single
+    trigger:
+      - platform: homeassistant
+        event: start
+    condition:
+      - condition: state
+        entity_id: input_boolean.program_termostat_activ
+        state: "on"
+      - condition: template
+        value_template: "{{ states('input_select.mod_termostat') != 'Manual' }}"
+    action:
+      - delay: "00:00:30"  # Așteaptă să se inițializeze toate entitățile
+      - service: climate.set_temperature
+        target:
+          entity_id:
+            - climate.termostat_camera_1
+            - climate.termostat_camera_2
+            - climate.termostat_camera_3
+            - climate.termostat_camera_4
+        data:
+          temperature: "{{ states('sensor.temperatura_program_curent') | float }}"
+
+
+  # ═══════════════════════════════════════════════════════════
+  # GRUP B: CONTROL CENTRALĂ
+  # ═══════════════════════════════════════════════════════════
+
+  - id: "pornire_centrala_termica"
+    alias: "Centrală – Pornire când se cere căldură"
+    mode: single
+    max_exceeded: silent
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cere_caldura_vreun_termostat
+        to: "on"
+      - platform: homeassistant
+        event: start
+    condition:
+      - condition: state
+        entity_id: binary_sensor.cere_caldura_vreun_termostat
+        state: "on"
+      - condition: state
+        entity_id: switch.relay_contact_uscat_centrala
+        state: "off"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.relay_contact_uscat_centrala
+      - service: notify.persistent_notification
+        data:
+          title: "Centrală termică"
+          message: >
+            Centrala pornită la {{ now().strftime('%H:%M') }}.
+            Mod: {{ states('input_select.mod_termostat') }}.
+            Temperatură program: {{ states('sensor.temperatura_program_curent') }}°C.
+            Termostate active:
+            {%- if state_attr('climate.termostat_camera_1','hvac_action')=='heating' %} Camera 1{%- endif %}
+            {%- if state_attr('climate.termostat_camera_2','hvac_action')=='heating' %} Camera 2{%- endif %}
+            {%- if state_attr('climate.termostat_camera_3','hvac_action')=='heating' %} Camera 3{%- endif %}
+            {%- if state_attr('climate.termostat_camera_4','hvac_action')=='heating' %} Camera 4{%- endif %}
+
+  - id: "oprire_centrala_termica"
+    alias: "Centrală – Oprire când nu se mai cere căldură"
+    mode: single
+    max_exceeded: silent
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.cere_caldura_vreun_termostat
+        to: "off"
+      - platform: homeassistant
+        event: start
+    condition:
+      - condition: state
+        entity_id: binary_sensor.cere_caldura_vreun_termostat
+        state: "off"
+      - condition: state
+        entity_id: switch.relay_contact_uscat_centrala
+        state: "on"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.relay_contact_uscat_centrala
+      - service: notify.persistent_notification
+        data:
+          title: "Centrală termică"
+          message: "Centrala oprită la {{ now().strftime('%H:%M') }}. Toate camerele au atins temperatura."
+
+  - id: "centrala_timeout_siguranta"
+    alias: "Centrală – Oprire de siguranță după 3 ore continuu"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: switch.relay_contact_uscat_centrala
+        to: "on"
+        for:
+          hours: 3
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.relay_contact_uscat_centrala
+      - service: notify.persistent_notification
+        data:
+          title: "⚠️ Alertă centrală termică"
+          message: >
+            Centrala a fost pornită mai mult de 3 ore continuu.
+            A fost oprită automat ca măsură de siguranță.
+            Verificați instalația!
+
+  - id: "alerta_termostat_offline"
+    alias: "Centrală – Alertă dacă un termostat devine indisponibil"
+    mode: parallel
+    max: 4
+    trigger:
+      - platform: state
+        entity_id:
+          - climate.termostat_camera_1
+          - climate.termostat_camera_2
+          - climate.termostat_camera_3
+          - climate.termostat_camera_4
+        to: "unavailable"
+        for:
+          minutes: 5
+    action:
+      - service: notify.persistent_notification
+        data:
+          title: "⚠️ Termostat offline"
+          message: >
+            Termostatul {{ trigger.to_state.attributes.friendly_name | default(trigger.entity_id) }}
+            nu răspunde de 5 minute. Verificați bateria sau conexiunea Zigbee.
